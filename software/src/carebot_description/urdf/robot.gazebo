@@ -1,0 +1,295 @@
+<?xml version="1.0"?>
+<robot name="robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<xacro:include filename="$(find carebot_description)/urdf/gazebo_control.xacro" />
+  
+  <gazebo reference="camera_link">
+    <sensor type="camera" name="camera">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <camera>
+        <horizontal_fov>1.089</horizontal_fov>
+        <image>
+          <format>R8G8B8</format>
+          <width>640</width>
+          <height>640</height>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>8.0</far>
+        </clip>
+      </camera>
+    </sensor>
+  </gazebo>
+
+  <joint name="lidar_link_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.055999999999999985345" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="lidar_link" />
+  </joint>
+  <link name="lidar_link"></link>
+
+  <joint name="imu_link_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.036999999999999977351" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="imu_link" />
+  </joint>
+  <link name="imu_link"></link>
+
+  <gazebo reference="lidar_link">
+    <sensor type="gpu_lidar" name="head_hokuyo_sensor">
+      <topic>/scan</topic>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>920</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14</min_angle>
+            <max_angle>3.14</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.4</min>
+          <max>40.0</max>
+          <resolution>0.05</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <odom_publish_frequency>20</odom_publish_frequency>
+      <odom_topic>/odom</odom_topic>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="imu_link">
+    <gravity>true</gravity>
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>20</update_rate>
+      <visualize>true</visualize>
+      <topic>imu</topic>
+      <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+      <pose>0 0 0 0 0 0</pose>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <topic>/joint_states</topic>
+      <joint_name>wheel1_speed</joint_name>
+      <joint_name>wheel2_speed</joint_name>
+      <joint_name>wheel3_speed</joint_name>
+    </plugin>
+  </gazebo>
+
+  <!-- BASE -->
+  <gazebo reference="base">
+    <material>Gazebo/Wood</material>
+  </gazebo>
+
+  <!-- RODAS com atrito e implicitSpringDamper para Gazebo Harmonic -->
+  <gazebo reference="roda">
+    <material>Gazebo/Black</material>
+    <mu1>2.0</mu1>
+    <mu2>2.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+    <minDepth>0.001</minDepth>
+    <implicitSpringDamper>true</implicitSpringDamper>
+  </gazebo>
+
+  <gazebo reference="roda_2">
+    <material>Gazebo/Black</material>
+    <mu1>2.0</mu1>
+    <mu2>2.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+    <minDepth>0.001</minDepth>
+    <implicitSpringDamper>true</implicitSpringDamper>
+  </gazebo>
+
+  <gazebo reference="roda_3">
+    <material>Gazebo/Black</material>
+    <mu1>2.0</mu1>
+    <mu2>2.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>1.0</kd>
+    <minDepth>0.001</minDepth>
+    <implicitSpringDamper>true</implicitSpringDamper>
+  </gazebo>
+
+  <!-- ROLETES com atrito baixo (omnidirecional) -->
+  <gazebo reference="rolete">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_1">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_2">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_3">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_4">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_5">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_6">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_7">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_8">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_9">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_10">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_11">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_12">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_13">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_14">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_15">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_16">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_17">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_18">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_19">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_20">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_21">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_22">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_23">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_24">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_25">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_26">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_27">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_28">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_29">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_30">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_31">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_32">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_33">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_34">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_35">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_36">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_37">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_38">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+  <gazebo reference="rolete_39">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>0.1</mu1><mu2>0.1</mu2>
+  </gazebo>
+
+</robot>

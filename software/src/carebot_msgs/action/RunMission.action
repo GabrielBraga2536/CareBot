@@ -1,0 +1,12 @@
+# Request
+bool simulation
+string world
+string initial
+string target
+---
+# Result
+bool success
+string message
+---
+# Feedback
+string robot_feedback

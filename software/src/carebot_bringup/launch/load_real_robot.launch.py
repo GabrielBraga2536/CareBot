@@ -1,0 +1,258 @@
+from ament_index_python.packages import get_package_share_path
+
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess,RegisterEventHandler, TimerAction, IncludeLaunchDescription
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution
+from launch.event_handlers import OnProcessExit, OnProcessStart
+from launch_ros.actions import Node
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.parameter_descriptions import ParameterValue
+from ament_index_python.packages import get_package_share_directory
+import os
+import xacro
+
+
+def generate_launch_description():
+
+    declare_namespace_cmd = DeclareLaunchArgument(
+        'namespace',
+        default_value='',
+        description='Top-level namespace')
+
+    urdf_path = get_package_share_path('carebot_description')
+    rviz_path = get_package_share_path('navigation_pkg')
+
+    default_model_path = urdf_path / 'urdf/robot.xacro'
+    default_rviz_config_path = rviz_path / 'config/rviz/robot.rviz'
+
+    rplidar_launch_path = os.path.join(
+        get_package_share_directory('rplidar_ros'),
+        'launch',
+        'rplidar_c1_launch.py'
+    )
+
+
+    gui_arg = DeclareLaunchArgument(name='gui', default_value='false', choices=['true', 'false'],
+                                    description='Flag to enable joint_state_publisher_gui')
+    model_arg = DeclareLaunchArgument(name='model', default_value=str(default_model_path),
+                                      description='Absolute path to robot urdf file')
+    rviz_arg = DeclareLaunchArgument(name='rvizconfig', default_value=str(default_rviz_config_path),
+                                     description='Absolute path to rviz config file')
+    use_sim_time_arg = DeclareLaunchArgument(name='use_sim_time', default_value='false',
+                                            description='Flag to enable use_sim_time')
+
+
+    
+
+    teleop_joy_arg = DeclareLaunchArgument(name='teleop', default_value='false',
+                                            description='Flag to enable the teleoperation')
+
+    
+    
+    
+
+    robot_description = ParameterValue(Command(['xacro ', LaunchConfiguration('model'),' sim_mode:=', LaunchConfiguration('use_sim_time')]),
+                                       value_type=str)
+    
+    # xacro_file = os.path.join(urdf_tutorial_path, 'urdf', 'robot.xacro')
+    robot_description_config = xacro.process_file(default_model_path)
+    robot_urdf = robot_description_config.toxml()
+    
+
+
+    log_level = DeclareLaunchArgument(
+        name='log_level', 
+        default_value='INFO', 
+        choices=['DEBUG','INFO','WARN','ERROR','FATAL'],
+        description='Flag to set log level'
+    )
+
+    robot_state_publisher_node = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        output='both',
+        parameters=[{
+            'use_sim_time': LaunchConfiguration('use_sim_time'), 
+            'robot_description': robot_description
+        }],
+        arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')]
+    )
+
+    twist_mux_params = os.path.join(get_package_share_directory('carebot_simulation'),'config/nav','twist_mux.yaml')
+    twist_mux = Node(
+            package="twist_mux",
+            executable="twist_mux",
+            parameters=[twist_mux_params],
+            remappings=[('/cmd_vel_out','/diff_cont/cmd_vel_unstamped')]
+    )
+
+    rplidar_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('rplidar_ros'),
+                    'launch',
+                    'rplidar_s1_launch.py'
+                )
+            )
+    )
+
+    laser_filter = Node(
+                package="laser_filters",
+                executable="scan_to_scan_filter_chain",
+                parameters=[
+                    PathJoinSubstitution([
+                        get_package_share_directory("navigation_pkg"),
+                        "config/nav", "box_filter.yaml",
+                    ])]
+        )
+
+
+    # Path to your teleop launch file (example)
+    teleop_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('carebot_bringup'),
+                'launch',
+                'teleop_twist.launch.py'
+            )
+        ),
+        condition=IfCondition(LaunchConfiguration('teleop'))
+    )
+
+    robot_description = Command(['ros2 param get --hide-type /robot_state_publisher robot_description'])
+    controller_params_file =  os.path.join(get_package_share_directory('omnidirectional_controllers'), 'config/omnidirectional_controller.yaml') 
+    
+    controller_manager = Node(
+        package="controller_manager",
+        executable="ros2_control_node",
+        parameters=[{'robot_description': robot_description},
+                controller_params_file],
+        output="both",
+    )
+
+    # Só inicia o controller_manager DEPOIS que o robot state publisher "startar" + 1s
+    start_controller_after_rsp = RegisterEventHandler(
+        OnProcessStart(
+            target_action=robot_state_publisher_node,
+            on_start=[TimerAction(period=3.0, actions=[controller_manager])]
+        )
+    )
+
+    omni_base_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["omnidirectional_controller"],
+    )
+
+    omni_base_controller_event_handler = RegisterEventHandler(
+        event_handler=OnProcessStart(
+            target_action=controller_manager,
+            on_start=[omni_base_controller_spawner]
+        )
+    )
+
+    joint_state_broadcaster_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["joint_state_broadcaster"],
+    )
+
+    joint_state_broadcaster_event_handler = RegisterEventHandler(
+        event_handler=OnProcessStart(
+            target_action=controller_manager,
+            on_start=[joint_state_broadcaster_spawner]
+        )
+    )
+
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='own_log',
+        parameters=[{
+            'use_sim_time': LaunchConfiguration('use_sim_time')
+        }],
+        arguments=['-d', LaunchConfiguration('rvizconfig'), '--ros-args', '--log-level', LaunchConfiguration('log_level')]
+
+    )
+
+
+    robot_localization_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[os.path.join(get_package_share_path('navigation_pkg'), 'config/nav/ekf.yaml'), {'use_sim_time': LaunchConfiguration('use_sim_time')}]
+    )
+
+    # Vision launch 
+
+    camera_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('usb_cam'),
+                'launch',
+                'camera.launch.py'
+            )
+        ),
+    )
+
+    floor_detector_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('floor_detector'),
+                'launch',
+                'floor_detector.launch.py'
+            )
+        ),
+    )
+
+    hri_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory('carebot_expression'),
+                'launch',
+                'expression_system.launch.py'
+            )
+        ),
+    )
+
+    behavior_node = Node(
+        package='carebot_behavior',
+        executable='behavior_manager',
+        name='behavior_manager',
+        output='screen',
+    )
+
+    serial_interface_node = Node(
+        package='serial_interface_pkg',
+        executable='serial_interface',
+        name='serial_interface',
+        output='screen',
+    )
+
+    return LaunchDescription([
+        declare_namespace_cmd,
+        log_level,
+        gui_arg,
+        model_arg,
+        rviz_arg,
+        use_sim_time_arg,
+        teleop_joy_arg,
+        robot_state_publisher_node, # publica o robô em si (URDF)
+        rviz_node, #RVIZ2 para debug
+        rplidar_launch,
+        laser_filter,
+        teleop_launch,
+        # twist_mux, #MUX de prioridade das velocidades
+        start_controller_after_rsp, #ROS2_CONTROL
+        omni_base_controller_event_handler, #ROS2_CONTROL
+        joint_state_broadcaster_event_handler, #ROS2_CONTROL
+        robot_localization_node, #EKF + Publish Odom frame to transform
+        camera_launch,
+        floor_detector_launch,
+        hri_launch,
+        behavior_node,
+        serial_interface_node
+    ])
