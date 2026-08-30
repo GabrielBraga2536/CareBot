@@ -5,3 +5,8 @@ log/
 **/*.pyc
 **/*.pyo
 .colcon_test_result/
+.vscode/browse.vc.db
+software/.vscode/browse.vc.db
+software/src/.vscode/browse.vc.db
+**/*.db
+.vscode/
