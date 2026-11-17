@@ -14,7 +14,22 @@
   </xacro:unless>
 
   <!-- ============================================================ -->
-  <!-- PROPRIEDADES                                                  -->
+  <!-- MATERIAIS                                                     -->
+  <!-- ============================================================ -->
+  <material name="chassis_white">
+    <color rgba="0.92 0.92 0.92 1.0"/>
+  </material>
+  
+  <material name="profile_gray">
+    <color rgba="0.75 0.75 0.75 1.0"/>
+  </material>
+
+  <material name="wheel_dark">
+    <color rgba="0.2 0.2 0.2 1.0"/>
+  </material>
+
+  <!-- ============================================================ -->
+  <!-- PROPRIEDADES FÍSICAS E DIMENSÕES                              -->
   <!-- ============================================================ -->
 
   <!-- Base (chapa): 520x400x6mm -->
@@ -26,36 +41,133 @@
   <xacro:property name="roda_r"         value="0.059"/>
   <xacro:property name="roda_e"         value="0.030"/>
 
-  <!-- Layout: vão livre 17mm -->
+  <!-- Layout e alturas -->
   <xacro:property name="clearance"      value="0.017"/>
-
-  <!-- Posições calculadas -->
   <xacro:property name="base_link_z"    value="0.020"/>   <!-- base inferior acima do chão -->
   <xacro:property name="roda_z_rel"     value="0.039"/>   <!-- centro roda relativo base_link -->
-  <xacro:property name="chapa2_z"       value="0.0567"/>  <!-- relativo base_link -->
-  <xacro:property name="chapa3_z"       value="0.1073"/>  <!-- relativo base_link -->
 
-  <!-- Rodas: disposição 335.4x335.4mm -->
+  <!-- Posições das rodas no plano XY -->
   <xacro:property name="rx"             value="0.1677"/>
   <xacro:property name="ry"             value="0.1677"/>
 
-  <!-- STL: origin relativo ao base_link -->
-  <xacro:property name="stl_z_offset"   value="0.267"/>
+  <!-- ============================================================ -->
+  <!-- MACROS VISUAIS / ESTRUTURAIS                                  -->
+  <!-- ============================================================ -->
+
+  <!-- Macro para Prateleiras (adiciona visual e colisão correspondente) -->
+  <xacro:macro name="plate_box" params="length width thickness z_center">
+    <visual>
+      <origin xyz="0 0 ${z_center}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${length} ${width} ${thickness}"/>
+      </geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${z_center}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${length} ${width} ${thickness}"/>
+      </geometry>
+    </collision>
+  </xacro:macro>
+
+
+  <!-- Macro para a Chapa Base com Recortes para as Rodas -->
+  <xacro:macro name="base_plate_with_holes" params="z_center">
+    <!-- 1. Espinha Central (Cobre o robô de ponta a ponta, mas passa entre as rodas esquerda e direita) -->
+    <visual>
+      <origin xyz="0 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.520 0.295 0.006"/></geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.520 0.295 0.006"/></geometry>
+    </collision>
+
+    <!-- 2. Corpo Central Largo (Cobre a largura total, mas fica entre as rodas dianteiras e traseiras) -->
+    <visual>
+      <origin xyz="0 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.215 0.400 0.006"/></geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.215 0.400 0.006"/></geometry>
+    </collision>
+
+    <!-- 3. Borda Frontal (Fecha a frente das rodas) -->
+    <visual>
+      <origin xyz="0.244 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.032 0.400 0.006"/></geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="0.244 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.032 0.400 0.006"/></geometry>
+    </collision>
+
+    <!-- 4. Borda Traseira (Fecha a traseira das rodas) -->
+    <visual>
+      <origin xyz="-0.244 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.032 0.400 0.006"/></geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.244 0 ${z_center}" rpy="0 0 0"/>
+      <geometry><box size="0.032 0.400 0.006"/></geometry>
+    </collision>
+  </xacro:macro>
+
+
+  <!-- Macro para Perfis de Alumínio Verticais -->
+  <xacro:macro name="pillar_box" params="x y z_center length_z size_x:=0.04 size_y:=0.02">
+    <visual>
+      <origin xyz="${x} ${y} ${z_center}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${size_x} ${size_y} ${length_z}"/>
+      </geometry>
+      <material name="profile_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="${x} ${y} ${z_center}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${size_x} ${size_y} ${length_z}"/>
+      </geometry>
+    </collision>
+  </xacro:macro>
+
+
+  <!-- Macro para Perfis Horizontais (Eixo Y) -->
+  <xacro:macro name="horizontal_profile_y" params="x z length size_x:=0.04 size_z:=0.02">
+    <visual>
+      <origin xyz="${x} 0 ${z}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${size_x} ${length} ${size_z}"/>
+      </geometry>
+      <material name="profile_gray"/>
+    </visual>
+    <collision>
+      <origin xyz="${x} 0 ${z}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${size_x} ${length} ${size_z}"/>
+      </geometry>
+    </collision>
+  </xacro:macro>
+
 
   <!-- ============================================================ -->
   <!-- MACRO: RODA MOTRIZ                                            -->
   <!-- ============================================================ -->
   <xacro:macro name="roda_motriz" params="nome x y axis_y:=1">
     <link name="${nome}">
-      <!-- <visual>
+      <visual>
         <geometry>
           <cylinder radius="${roda_r}" length="${roda_e}"/>
         </geometry>
         <origin xyz="0 0 0" rpy="1.5707963 0 0"/>
-        <material name="black_${nome}">
-          <color rgba="0.1 0.1 0.1 1"/>
-        </material>
-      </visual> -->
+        <material name="wheel_dark"/>
+      </visual>
       <collision>
         <geometry>
           <cylinder radius="${roda_r}" length="${roda_e}"/>
@@ -84,15 +196,13 @@
   <!-- ============================================================ -->
   <xacro:macro name="caster" params="nome x y">
     <link name="${nome}">
-      <!-- <visual>
+      <visual>
         <geometry>
           <cylinder radius="${roda_r}" length="${roda_e}"/>
         </geometry>
         <origin xyz="0 0 0" rpy="1.5707963 0 0"/>
-        <material name="black_caster_${nome}">
-          <color rgba="0.1 0.1 0.1 1"/>
-        </material>
-      </visual> -->
+        <material name="wheel_dark"/>
+      </visual>
       <collision>
         <geometry>
           <cylinder radius="${roda_r}" length="${roda_e}"/>
@@ -127,69 +237,97 @@
     <origin xyz="${rx} 0 ${base_link_z}" rpy="0 0 0"/>
   </joint>
 
-  <!-- base_link: geometria de colisão real (caixa) + visual STL -->
+  <!-- ============================================================ -->
+  <!-- BASE_LINK (ESTRUTURA COMPLETA DO ROBÔ)                       -->
+  <!-- ============================================================ -->
   <link name="base_link">
+    <!-- ==================== BANDEJAS PRINCIPAIS (1 a 4) ==================== -->
+    <!-- Chapa 1 / Base (Com recortes para as rodas, Z = 0.08) -->
+    <xacro:base_plate_with_holes z_center="0.08"/>
+    
+    <!-- Chapa 2 (Z = 0.16) -->
+    <xacro:plate_box length="${base_x}" width="${base_y}" thickness="${base_z}" z_center="0.16"/>
+    
+    <!-- Chapa 3 (Z = 0.24) -->
+    <xacro:plate_box length="${base_x}" width="${base_y}" thickness="${base_z}" z_center="0.24"/>
+    
+    <!-- Chapa 4 (Z = 0.32) -->
+    <xacro:plate_box length="${base_x}" width="${base_y}" thickness="${base_z}" z_center="0.32"/>
+
+
+    <!-- ==================== PERFIS HORIZONTAIS (EIXOS DAS RODAS) ==================== -->
+    <!-- Perfil Frontal (X = 0.1677). Z=0.05 o posiciona logo abaixo da chapa principal -->
+    <xacro:horizontal_profile_y x="0.1677" z="0.068" length="0.300"/>
+
+    <!-- Perfil Traseiro (X = -0.1677) -->
+    <xacro:horizontal_profile_y x="-0.1677" z="0.068" length="0.300"/>
+
+
+    <!-- ==================== PILARES ENTRE BANDEJAS ==================== -->
+    <!-- Nível 1 -> 2 (Vão de 0.08 a 0.16 | length_z = 0.08 | z_center = 0.12) -->
+    <xacro:pillar_box x="-0.1677" y="0.14"  z_center="0.12" length_z="0.08"/>
+    <xacro:pillar_box x="-0.1677" y="-0.14" z_center="0.12" length_z="0.08"/>
+
+    <!-- Nível 2 -> 3 (Vão de 0.16 a 0.24 | length_z = 0.08 | z_center = 0.20) -->
+    <xacro:pillar_box x="-0.1677" y="0.14"  z_center="0.20" length_z="0.08"/>
+    <xacro:pillar_box x="-0.1677" y="-0.14" z_center="0.20" length_z="0.08"/>
+
+    <!-- Nível 3 -> 4 (Vão de 0.24 a 0.32 | length_z = 0.08 | z_center = 0.28) -->
+    <xacro:pillar_box x="-0.1677" y="0.14"  z_center="0.28" length_z="0.08"/>
+    <xacro:pillar_box x="-0.1677" y="-0.14" z_center="0.28" length_z="0.08"/>
+
+
+    <!-- ==================== MASTRO FRONTAL CENTRAL ÚNICO ==================== -->
+    <!-- Da Chapa 1 (Z=0.08) até a Chapa 5 (Z=0.58). Altura = 0.50, Centro Z = 0.33 -->
     <visual>
+      <origin xyz="0.1677 0.0 0.33" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="file://$(find carebot_description)/meshes/robot_diff_visual.stl" scale="1 1 1"/>
+        <box size="0.04 0.02 0.50"/>
       </geometry>
-      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
-      <material name="robot_body">
-        <color rgba="0.85 0.85 0.85 1"/>
-      </material>
+      <material name="profile_gray"/>
     </visual>
     <collision>
+      <origin xyz="0.1677 0.0 0.33" rpy="0 0 0"/>
       <geometry>
-        <box size="${base_x} ${base_y} ${base_z}"/>
+        <box size="0.04 0.02 0.50"/>
       </geometry>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
     </collision>
-    <inertial>
-      <mass value="8.0"/>
-      <inertia ixx="0.0876" ixy="0" ixz="0"
-               iyy="0.1311" iyz="0"
-               izz="0.2187"/>
-    </inertial>
-  </link>
 
-  <!-- Chapas 2 e 3 — apenas colisão, visual já está no STL -->
-  <link name="chapa_2">
-    <collision>
-      <geometry>
-        <box size="${base_x} ${base_y} ${base_z}"/>
-      </geometry>
-    </collision>
-    <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="0.00548" ixy="0" ixz="0"
-               iyy="0.00820" iyz="0"
-               izz="0.01368"/>
-    </inertial>
-  </link>
-  <joint name="chapa_2_joint" type="fixed">
-    <parent link="base_link"/>
-    <child  link="chapa_2"/>
-    <origin xyz="0 0 ${chapa2_z}" rpy="0 0 0"/>
-  </joint>
 
-  <link name="chapa_3">
-    <collision>
+    <!-- ==================== REFORÇO CHANFRADO CENTRAL ==================== -->
+    <visual>
+      <origin xyz="0.1287 0.0 0.52" rpy="0 -0.7854 0"/>
       <geometry>
-        <box size="${base_x} ${base_y} ${base_z}"/>
+        <box size="0.029 0.03 0.14"/>
+      </geometry>
+      <material name="profile_gray"/>
+    </visual>
+
+
+    <!-- ==================== BANDEJA SUPERIOR 5 (Topo do Robô) ==================== -->
+    <visual>
+      <origin xyz="0.120 0.0 0.58" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.28 0.32 ${base_z}"/>
+      </geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="0.120 0.0 0.58" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.28 0.32 ${base_z}"/>
       </geometry>
     </collision>
+
+    <!-- Inércia combinada do robô -->
     <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="0.00548" ixy="0" ixz="0"
-               iyy="0.00820" iyz="0"
-               izz="0.01368"/>
+      <origin xyz="-0.02 0 0.15" rpy="0 0 0"/>
+      <mass value="9.0"/>
+      <inertia ixx="0.12" ixy="0" ixz="0"
+               iyy="0.18" iyz="0"
+               izz="0.24"/>
     </inertial>
   </link>
-  <joint name="chapa_3_joint" type="fixed">
-    <parent link="base_link"/>
-    <child  link="chapa_3"/>
-    <origin xyz="0 0 ${chapa3_z}" rpy="0 0 0"/>
-  </joint>
 
   <!-- ============================================================ -->
   <!-- RODAS MOTRIZES TRASEIRAS                                      -->
@@ -204,18 +342,15 @@
   <xacro:caster nome="caster_front_right" x=" ${rx}" y="-${ry}"/>
 
   <!-- ============================================================ -->
-  <!-- LIDAR                                                         -->
+  <!-- SENSORES: LIDAR, IMU E CÂMERA                                 -->
   <!-- ============================================================ -->
   <link name="lidar_link"/>
   <joint name="lidar_link_joint" type="fixed">
     <parent link="base_link"/>
     <child  link="lidar_link"/>
-    <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    <origin xyz="0 0 0.200" rpy="0 0 0"/>
   </joint>
 
-  <!-- ============================================================ -->
-  <!-- IMU                                                           -->
-  <!-- ============================================================ -->
   <link name="imu_link"/>
   <joint name="imu_link_joint" type="fixed">
     <parent link="base_link"/>
@@ -223,17 +358,12 @@
     <origin xyz="0 0 0.037" rpy="0 0 0"/>
   </joint>
 
-  <!-- ============================================================ -->
-  <!-- CÂMERA                                                        -->
-  <!-- ============================================================ -->
   <link name="camera_link">
     <visual>
       <geometry>
         <box size="0.03 0.08 0.03"/>
       </geometry>
-      <material name="black_cam">
-        <color rgba="0.1 0.1 0.1 1"/>
-      </material>
+      <material name="wheel_dark"/>
     </visual>
     <inertial>
       <mass value="0.05"/>
@@ -245,7 +375,7 @@
   <joint name="camera_link_joint" type="fixed">
     <parent link="base_link"/>
     <child  link="camera_link"/>
-    <origin xyz="${base_x/2 - 0.02} 0 ${chapa3_z + 0.015}" rpy="0 0 0"/>
+    <origin xyz="${base_x/2 - 0.02} 0 0.25" rpy="0 0 0"/>
   </joint>
 
   <link name="camera_link_optical"/>

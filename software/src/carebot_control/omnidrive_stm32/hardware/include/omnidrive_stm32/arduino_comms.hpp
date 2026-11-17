@@ -1,16 +1,13 @@
 #ifndef omnidrive_stm32_ARDUINO_COMMS_HPP
 #define omnidrive_stm32_ARDUINO_COMMS_HPP
 
-// #include <cstring>
 #include <sstream>
-// #include <cstdlib>
 #include <libserial/SerialPort.h>
 #include <iostream>
-
+#include <algorithm>
 
 LibSerial::BaudRate convert_baud_rate(int baud_rate)
 {
-  // Just handle some common baud rates
   switch (baud_rate)
   {
     case 1200: return LibSerial::BaudRate::BAUD_1200;
@@ -31,9 +28,7 @@ LibSerial::BaudRate convert_baud_rate(int baud_rate)
 
 class ArduinoComms
 {
-
 public:
-
   ArduinoComms() = default;
 
   void connect(const std::string &serial_device, int32_t baud_rate, int32_t timeout_ms)
@@ -56,77 +51,64 @@ public:
     return serial_conn_.IsOpen();
   }
 
-
-  std::string send_msg(const std::string &msg_to_send, bool print_output = false)
+  void read_encoder_values(int &val_1, int &val_2)
   {
-    serial_conn_.FlushIOBuffers(); // Just in case
-    serial_conn_.Write(msg_to_send);
-
-    std::string response = "";
-    try
+    // Lê instantaneamente todos os bytes que já chegaram da STM32 sem travar o loop de 30Hz
+    while (serial_conn_.IsDataAvailable())
     {
-      // Responses end with \r\n so we will read up to (and including) the \n.
-      serial_conn_.ReadLine(response, '\n', timeout_ms_);
+      char c = 0;
+      try
+      {
+        serial_conn_.ReadByte(c, 1);
+      }
+      catch (const LibSerial::ReadTimeout&)
+      {
+        break;
+      }
+
+      // Ignora bytes nulos (\0) de preenchimento do buffer de 40 bytes da STM32 e \r
+      if (c == '\0' || c == '\r')
+      {
+        continue;
+      }
+
+      if (c == '\n')
+      {
+        if (!rx_line_.empty())
+        {
+          size_t del_pos1 = rx_line_.find(' ');
+          if (del_pos1 != std::string::npos)
+          {
+            std::string token_1 = rx_line_.substr(0, del_pos1);
+            std::string token_2 = rx_line_.substr(del_pos1 + 1);
+            val_1 = std::atoi(token_1.c_str());
+            val_2 = std::atoi(token_2.c_str());
+          }
+          rx_line_.clear();
+        }
+      }
+      else
+      {
+        rx_line_ += c;
+        if (rx_line_.size() > 64)
+        {
+          rx_line_.clear();
+        }
+      }
     }
-    catch (const LibSerial::ReadTimeout&)
-    {
-        std::cerr << "The ReadByte() call has timed out." << std::endl ;
-    }
-
-    if (print_output)
-    {
-      std::cout << " Recv: " << response << std::endl;
-    }
-
-    return response;
   }
 
-
-  void send_empty_msg()
+  void set_motor_values(int val_1, int val_2)
   {
-    std::string response = send_msg("");
-  }
-
-  void read_encoder_values(int &val_1, int &val_2, int &val_3)
-  {
-    std::string response = send_msg("");
-
-    std::string delimiter = " ";
-    size_t del_pos1 = response.find(delimiter);
-    std::string token_1 = response.substr(0, del_pos1); // Primeiro valor
-
-    size_t del_pos2 = response.find(delimiter, del_pos1 + 1);
-    std::string token_2 = response.substr(del_pos1 + 1, del_pos2 - del_pos1 - 1); // Segundo valor
-
-    std::string token_3 = response.substr(del_pos2 + 1); // Terceiro valor
-
-    val_1 = std::atoi(token_1.c_str());
-    val_2 = std::atoi(token_2.c_str());
-    val_3 = std::atoi(token_3.c_str());
-
-    std::cout << " Enc_1: " << val_1 << " Enc_2: " << val_2 << " Enc_3: " << val_3 << std::endl;
-
-  }
-  void set_motor_values(int val_1,int val_2,int val_3)
-  {
-    char msg[50] = {0};
-    sprintf(msg, "m %09d %09d %09d\n", val_1, val_2, val_3);
-
-    std::cout << "Motors: " << msg << std::endl;
-    send_msg(msg);
-  }
-
-
-  void set_pid_values(int k_p, int k_d, int k_i, int k_o)
-  {
-    std::stringstream ss;
-    ss << "u " << k_p << ":" << k_d << ":" << k_i << ":" << k_o << "\0";
-    // send_msg(ss.str());
+    char msg[40] = {0};
+    sprintf(msg, "m %d %d\n", val_1, val_2);
+    serial_conn_.Write(std::string(msg));
   }
 
 private:
-    LibSerial::SerialPort serial_conn_;
-    int timeout_ms_;
+  LibSerial::SerialPort serial_conn_;
+  int timeout_ms_;
+  std::string rx_line_ = "";
 };
 
 #endif // omnidrive_stm32_ARDUINO_COMMS_HPP

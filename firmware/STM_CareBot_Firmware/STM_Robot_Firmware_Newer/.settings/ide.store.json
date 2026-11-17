@@ -1,0 +1,9 @@
+{
+  "device": "STM32U545RET6Q",
+  "core": "Cortex-M33",
+  "order": 0,
+  "toolchain": "GCC",
+  "source": {
+    "sourceType": "STM32CubeIDE"
+  }
+}
